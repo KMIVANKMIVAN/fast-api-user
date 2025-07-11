@@ -1,0 +1,31 @@
+from pydantic import BaseModel, EmailStr, Field, field_validator
+from typing import Optional
+
+
+class UserCreateDTO(BaseModel):
+    email: EmailStr
+    name: str = Field(..., min_length=1)
+    mobile: str = Field(..., min_length=7)
+    password: str = Field(..., min_length=8, max_length=40)
+    city: Optional[str] = ""
+    country_id: Optional[int] = 0
+    street: Optional[str] = ""
+    website: Optional[str] = ""
+
+    @field_validator('city', 'street', 'website')
+    def none_to_empty_str(cls, v):
+        return v or ""
+
+
+class UserUpdateDTO(BaseModel):
+    name: Optional[str] = None
+    mobile: Optional[str] = None
+    password: Optional[str] = Field(None, min_length=8, max_length=40)
+    city: Optional[str] = None
+    country_id: Optional[int] = None
+    street: Optional[str] = None
+    website: Optional[str] = None
+
+    @field_validator('city', 'street', 'website', mode='before')
+    def none_to_empty_str(cls, v):
+        return v or ""

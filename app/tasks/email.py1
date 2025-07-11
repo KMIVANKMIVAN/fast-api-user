@@ -1,0 +1,106 @@
+from app.tasks.celery_app import celery_app
+from app.services.email import EmailService
+from app.schemas.email import TextEmailItem, PDFEmailItem
+from typing import List, Dict
+import time
+from app.core.logging_config import logger
+
+@celery_app.task(name="send_text_email")
+def send_text_email(email_item_dict):
+    """
+    Tarea de Celery para enviar un email de texto.
+
+    Recibe un diccionario con los detalles del email, instancia un objeto
+    EmailService para enviar el email y registra el resultado.
+
+    **Parámetros**
+
+    - `email_item_dict`: Diccionario que contiene los detalles del email, 
+      incluyendo el destinatario, asunto y contenido.
+
+    **Retorno**
+
+    - `result`: Diccionario con el código de estado de la respuesta y un indicador
+      de éxito o error.
+
+    **Excepciones**
+
+    - Registra un error en caso de excepción durante el envío del email 
+      y la lanza nuevamente.
+    """
+    try:
+        email_service = EmailService()
+        email_item = TextEmailItem(**email_item_dict)
+        result = email_service.send_text_email(email_item)
+        logger.info(f"Email enviado a: {email_item.email} - Resultado: {result}")
+        # Añadir un pequeño delay para no sobrecargar la API de SendGrid
+        time.sleep(0.2)
+        
+        return result
+    except Exception as exc:
+        logger.error(f"Error enviando email: {exc} a {email_item_dict}")
+        raise exc
+
+@celery_app.task(name="send_pdf_email")
+def send_pdf_email(email_item_dict):
+    """
+    Tarea de Celery para enviar un email con uno o más PDFs adjuntos.
+
+    Recibe un diccionario con los detalles del email, instancia un objeto
+    EmailService para enviar el email y registra el resultado.
+
+    **Parámetros**
+
+    - `email_item_dict`: Diccionario que contiene los detalles del email, 
+      incluyendo el destinatario, asunto, contenido y adjuntos.
+
+    **Retorno**
+
+    - `result`: Diccionario con el código de estado de la respuesta y un indicador
+      de éxito o error.
+
+    **Excepciones**
+
+    - Registra un error en caso de excepción durante el envío del email 
+      y la lanza nuevamente.
+    """
+    email_service = EmailService()
+    email_item = PDFEmailItem(**email_item_dict)
+    result = email_service.send_pdf_email(email_item)
+    
+    # Añadir un pequeño delay para no sobrecargar la API de SendGrid
+    time.sleep(0.2)
+    
+    return result
+
+@celery_app.task(name="process_text_email_batch")
+def process_text_email_batch(email_items_list):
+    """
+    Procesa un lote de emails de texto.
+
+    Recibe una lista de diccionarios con la información de cada email a enviar y
+    devuelve una lista de IDs de tareas Celery que se pueden utilizar para rastrear
+    los resultados de cada email.
+    """
+    results = []
+    for email_item_dict in email_items_list:
+        # Enviar cada email como una tarea individual para mejor paralelización
+        result = send_text_email.delay(email_item_dict)
+        results.append(result.id)
+    return results
+
+@celery_app.task(name="process_pdf_email_batch")
+def process_pdf_email_batch(email_items_list):
+    """
+    Procesa un lote de emails con PDFs adjuntos.
+
+    Recibe una lista de diccionarios con la información de cada email a enviar y
+    devuelve una lista de IDs de tareas Celery que se pueden utilizar para rastrear
+    los resultados de cada email.
+    """
+    results = []
+    for email_item_dict in email_items_list:
+        # Enviar cada email como una tarea individual para mejor paralelización
+        result = send_pdf_email.delay(email_item_dict)
+        results.append(result.id)
+    return results

@@ -1,0 +1,51 @@
+services:
+  api-fluxnet:
+    build: .
+    image: api-fluxnet
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    container_name: api-fluxnet
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      # - REDIS_URL=redis://redis:6379/0
+      # - DATABASE_URL=postgresql://ubuntu:ubuntu@db-postgres-mplus:5432/db_postgres_fluxnet
+    # depends_on:
+    #   - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    # networks:
+    #   - my_shared_network
+
+  # redis:
+  #   image: redis:7
+  #   container_name: redis
+  #   restart: unless-stopped
+
+  # worker-emails:
+  #   build: .
+  #   container_name: worker-emails
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - redis
+  #     - api-fluxnet
+  #   environment:
+  #     - PYTHONPATH=/app
+  #   command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=10 -Q emails -n worker.emails@%h
+
+  # worker-invoices:
+  #   build: .
+  #   container_name: worker-invoices
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - redis
+  #   environment:
+  #     - PYTHONPATH=/app
+  #   command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=10 -Q invoices -n worker.invoices@%h
+# networks:
+#     my_shared_network:
+#       external: true
