@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(
     title="fluxnet API",
     description="API desarrollado con FastAPI, para ser consumida entre fluxnet y servicios externos",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 app.add_middleware(
@@ -16,4 +16,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(users)  
+# app.include_router(users)
+app.include_router(users, prefix="/api")

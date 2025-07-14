@@ -1,5 +1,7 @@
 from app.core.database import get_db_connection
-from app.dtos.base_dto import BaseFilterDTO 
+
+from app.dtos import UserCreateDTO, UserUpdateDTO, BaseAuditDTO, BaseFilterDTO
+
 
 # todos los getters de usuarios
 def get_user_all():
@@ -7,13 +9,13 @@ def get_user_all():
     cur = conn.cursor()
     query = """
         SELECT id, email, name, mobile, password, city, country_id, street, website,
-               status, userCreate, userUpdate, dateCreate, dateUpdate
+            status, user_create, user_update, date_create, date_update
         FROM users
     """
-    cur.execute(query, (email,))
+    cur.execute(query)
     row = cur.fetchone()
     conn.close()
-    
+
     if row:
         return {
             "id": row[0],
@@ -26,53 +28,53 @@ def get_user_all():
             "street": row[7],
             "website": row[8],
             "status": row[9],
-            "userCreate": row[10],
-            "userCreate": row[11],
+            "userCreate": row[10],  # puedes mantener este alias si quieres
+            "userUpdate": row[11],
             "dateCreate": row[12],
             "dateUpdate": row[13],
         }
     return None
 
-def get_user_by_filter(filters: BaseFilterDTO):
+
+def get_users_by_filter(baseFilterDTO: BaseFilterDTO):
     conn = get_db_connection()
     cur = conn.cursor()
 
     query = """
-        SELECT id, email, name, mobile, password, city, country_id, street, website,
-               status, userCreate, userUpdate, dateCreate, dateUpdate
+        SELECT *
         FROM users
     """
     params = []
     conditions = []
 
     # Filtros dinámicos
-    if filters.status is not None:
+    if baseFilterDTO.status is not None:
         conditions.append("status = %s")
-        params.append(filters.status)
+        params.append(baseFilterDTO.status)
 
-    if filters.userCreate is not None:
+    if baseFilterDTO.userCreate is not None:
         conditions.append("userCreate = %s")
-        params.append(filters.userCreate)
+        params.append(baseFilterDTO.userCreate)
 
-    if filters.userUpdate is not None:
+    if baseFilterDTO.userUpdate is not None:
         conditions.append("userUpdate = %s")
-        params.append(filters.userUpdate)
+        params.append(baseFilterDTO.userUpdate)
 
-    if filters.dateCreate is not None:
+    if baseFilterDTO.dateCreate is not None:
         conditions.append("dateCreate::date = %s::date")  # compara solo la fecha
-        params.append(filters.dateCreate)
+        params.append(baseFilterDTO.dateCreate)
 
-    if filters.dateUpdate is not None:
+    if baseFilterDTO.dateUpdate is not None:
         conditions.append("dateUpdate::date = %s::date")
-        params.append(filters.dateUpdate)
+        params.append(baseFilterDTO.dateUpdate)
 
     # WHERE dinámico
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
 
     # Pagination
-    limit = filters.limit or 10
-    page = filters.page or 1
+    limit = baseFilterDTO.limit or 10
+    page = baseFilterDTO.page or 1
     offset = (page - 1) * limit
 
     query += " ORDER BY id DESC LIMIT %s OFFSET %s"
@@ -102,7 +104,8 @@ def get_user_by_filter(filters: BaseFilterDTO):
         }
         for row in rows
     ]
-    
+
+
 def get_user_by_email(email: str):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -115,7 +118,7 @@ def get_user_by_email(email: str):
     cur.execute(query, (email,))
     row = cur.fetchone()
     conn.close()
-    
+
     if row:
         return {
             "id": row[0],
@@ -134,3 +137,50 @@ def get_user_by_email(email: str):
             "dateUpdate": row[13],
         }
     return None
+
+
+def post_user_create(user: UserCreateDTO):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    query = """
+        INSERT INTO users (
+            email, name, mobile, password, city, country_id, street, website,
+            status, user_create, user_update, date_create, date_update
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id;
+    """
+
+    values = (
+        user.email,
+        user.name,
+        user.mobile,
+        user.password,
+        user.city,
+        user.country_id,
+        user.street,
+        user.website,
+        user.status,
+        user.user_create,
+        user.user_update,
+        user.date_create,
+        user.date_update,
+    )
+
+    cur.execute(query, values)
+    user_id = cur.fetchone()[0]
+    conn.commit()
+    conn.close()
+
+    return {"id": user_id}
+
+
+class UserRepository:
+    get_user_all = staticmethod(get_user_all)
+    get_user_by_email = staticmethod(get_user_by_email)
+    get_user_by_filter = staticmethod(get_users_by_filter)
+    post_user_create = staticmethod(post_user_create)
+
+
+userRepository = UserRepository()

@@ -15,6 +15,7 @@ h11==0.16.0
 httptools==0.6.4
 idna==3.10
 kombu==5.5.3
+passlib==1.7.4
 prompt_toolkit==3.0.51
 psycopg2-binary==2.9.10
 pydantic==2.11.4

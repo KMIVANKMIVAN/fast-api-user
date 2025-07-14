@@ -1,7 +1,11 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
-from datetime import datetime 
-from app.schemas.audit_shema import BaseAuditSchema  # ajusta el import según tu estructura real
+from datetime import datetime
+
+from app.schemas import (
+    BaseAuditSchema,
+)
+
 
 class User(BaseAuditSchema):  # Hereda de audit.schema
     email: EmailStr
@@ -13,11 +17,12 @@ class User(BaseAuditSchema):  # Hereda de audit.schema
     street: Optional[str] = ""
     website: Optional[str] = ""
 
-    @field_validator('city', 'street', 'website', mode='before')
+    @field_validator("city", "street", "website", mode="before")
     def none_to_empty_str(cls, v):
         return v or ""
 
-class UserResponse(BaseModel):
+
+class UserResponse(BaseAuditSchema):
     id: int
     email: EmailStr
     name: str
@@ -26,8 +31,3 @@ class UserResponse(BaseModel):
     country_id: Optional[int] = 0
     street: Optional[str] = ""
     website: Optional[str] = ""
-    status: bool
-    userCreate: int
-    userUpdate: int
-    dateCreate: datetime
-    dateUpdate: datetime
